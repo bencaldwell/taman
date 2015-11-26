@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>// constants
+const int N_INPUTS = 2; //todo: how many inputs?
+const int N_OUTPUTS = 2; //todo: how many outputs?
+const int N_ELEMENTS = 100; //todo: calculate number of elements
+const int T_SCAN = 1000; //scantime in milliseconds
+const int T_ADAPTER = 500; //adapter delay in milliseconds
+
+// channels
+broadcast chan envInput[N_INPUTS];
+//broadcast chan chVAR[OUTPUTS][GENES_PER_OUTPUT - 1];
+//broadcast chan chOUT[OUTPUTS];
+broadcast chan exec[N_ELEMENTS];
+broadcast chan input;
+broadcast chan output;
+
+// variables
+int[0,1] var[N_ELEMENTS];
+
+
+//inputs
+int[0,1] in0, in1;
+
+//outputs
+int[0,1] out0, out1;</declaration>
+	<template>
+		<name>PLC</name>
+		<declaration>int n;
+clock x;</declaration>
+		<location id="id0" x="476" y="0">
+			<name x="466" y="-34">complete</name>
+			<label kind="invariant" x="466" y="17">x&lt;=T_SCAN</label>
+		</location>
+		<location id="id1" x="153" y="0">
+			<name x="143" y="-34">execution</name>
+			<committed/>
+		</location>
+		<location id="id2" x="0" y="0">
+			<name x="-10" y="-34">inputs</name>
+			<committed/>
+		</location>
+		<init ref="id2"/>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id2"/>
+			<label kind="guard" x="18" y="119">x&gt;=T_SCAN</label>
+			<nail x="476" y="153"/>
+			<nail x="0" y="153"/>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="guard" x="255" y="-34">n &gt;= N_ELEMENTS</label>
+			<label kind="synchronisation" x="289" y="-17">output!</label>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id1"/>
+			<label kind="guard" x="119" y="51">n &lt; N_ELEMENTS</label>
+			<label kind="synchronisation" x="136" y="68">exec[n]!</label>
+			<label kind="assignment" x="136" y="85">n:=n+1</label>
+			<nail x="187" y="51"/>
+			<nail x="127" y="51"/>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id1"/>
+			<label kind="synchronisation" x="18" y="-17">input!</label>
+			<label kind="assignment" x="18" y="0">n:=0, x:=0</label>
+		</transition>
+	</template>
+	<template>
+		<name>INPUT</name>
+		<parameter>broadcast chan &amp;in, int[0,1] &amp;var</parameter>
+		<declaration>clock x;</declaration>
+		<location id="id3" x="0" y="195">
+			<name x="8" y="161">armed</name>
+		</location>
+		<location id="id4" x="0" y="102">
+			<name x="8" y="68">transit</name>
+			<label kind="invariant" x="8" y="110">x&lt;=T_ADAPTER</label>
+		</location>
+		<location id="id5" x="0" y="0">
+			<name x="-10" y="-34">idle</name>
+		</location>
+		<init ref="id5"/>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id5"/>
+			<label kind="guard" x="136" y="85">var == 1</label>
+			<label kind="synchronisation" x="136" y="102">input?</label>
+			<label kind="assignment" x="136" y="119">var := 0</label>
+			<nail x="127" y="195"/>
+			<nail x="127" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-161" y="76">var == 0</label>
+			<label kind="synchronisation" x="-161" y="93">input?</label>
+			<label kind="assignment" x="-161" y="110">var := 1</label>
+			<nail x="-102" y="195"/>
+			<nail x="-102" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id3"/>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="8" y="25">in?</label>
+			<label kind="assignment" x="8" y="42">x:=0</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">TON</name>
+		<parameter>broadcast chan &amp;exec, int[0,1] &amp;in, int[0,1] &amp;out, int delay</parameter>
+		<declaration>clock x;</declaration>
+		<location id="id6" x="178" y="110">
+			<name x="168" y="76">running</name>
+			<label kind="invariant" x="168" y="127">x&lt;=(delay + T_SCAN)</label>
+		</location>
+		<location id="id7" x="0" y="229">
+			<name x="-10" y="195">on</name>
+		</location>
+		<location id="id8" x="0" y="-17">
+			<name x="-10" y="-51">off</name>
+		</location>
+		<init ref="id8"/>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id8"/>
+			<label kind="guard" x="0" y="72">in==0</label>
+			<label kind="synchronisation" x="0" y="89">exec?</label>
+			<label kind="assignment" x="0" y="106">out:=0</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id8"/>
+			<label kind="guard" x="18" y="-51">in==0</label>
+			<label kind="synchronisation" x="68" y="-34">exec?</label>
+			<nail x="178" y="-17"/>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id7"/>
+			<label kind="guard" x="85" y="178">x&gt;=delay &amp;&amp; in==1</label>
+			<label kind="synchronisation" x="18" y="152">exec?</label>
+			<label kind="assignment" x="18" y="169">out:=1</label>
+		</transition>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id6"/>
+			<label kind="guard" x="18" y="12">in==1</label>
+			<label kind="synchronisation" x="76" y="0">exec?</label>
+			<label kind="assignment" x="93" y="25">x:=0</label>
+		</transition>
+	</template>
+	<template>
+		<name>TOFF</name>
+		<parameter>broadcast chan &amp;exec, int[0,1] &amp;in, int[0,1] &amp;out, int delay</parameter>
+		<declaration>clock x;</declaration>
+		<location id="id9" x="202" y="149">
+			<name x="195" y="119">on</name>
+		</location>
+		<location id="id10" x="24" y="268">
+			<name x="-34" y="238">running</name>
+			<label kind="invariant" x="17" y="289">x&lt;=(delay + T_SCAN)</label>
+		</location>
+		<location id="id11" x="24" y="22">
+			<name x="14" y="-12">off</name>
+		</location>
+		<init ref="id11"/>
+		<transition>
+			<source ref="id10"/>
+			<target ref="id9"/>
+			<label kind="guard" x="212" y="229">in==1</label>
+			<label kind="synchronisation" x="212" y="246">exec?</label>
+			<nail x="204" y="263"/>
+		</transition>
+		<transition>
+			<source ref="id10"/>
+			<target ref="id11"/>
+			<label kind="guard" x="25" y="110">x&gt;=delay &amp;&amp; in==0</label>
+			<label kind="synchronisation" x="24" y="128">exec?</label>
+			<label kind="assignment" x="24" y="145">out:=0</label>
+		</transition>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id10"/>
+			<label kind="guard" x="102" y="213">in==0</label>
+			<label kind="synchronisation" x="102" y="229">exec?</label>
+			<label kind="assignment" x="102" y="246">x:=0</label>
+		</transition>
+		<transition>
+			<source ref="id11"/>
+			<target ref="id9"/>
+			<label kind="guard" x="102" y="51">in==1</label>
+			<label kind="synchronisation" x="100" y="39">exec?</label>
+			<label kind="assignment" x="102" y="59">out:=1</label>
+		</transition>
+	</template>
+	<template>
+		<name>ENV</name>
+		<declaration>clock x;
+int n = 0;</declaration>
+		<location id="id12" x="204" y="0">
+			<committed/>
+		</location>
+		<location id="id13" x="0" y="0">
+		</location>
+		<init ref="id13"/>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id13"/>
+			<label kind="synchronisation" x="18" y="85">envInput[n]!</label>
+			<nail x="204" y="102"/>
+			<nail x="0" y="102"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id12"/>
+			<label kind="select" x="34" y="-25">a : int[0, N_INPUTS-1]</label>
+			<label kind="assignment" x="18" y="0">n := a</label>
+		</transition>
+	</template>
+	<system>// gene declarations
+
+
+input0 = INPUT(envInput[0], in0);
+input1 = INPUT(envInput[1], in1);
+
+
+// List one or more processes to be composed into a system.
+system ENV, PLC;
+
+</system>
+	<queries>
+		<query>
+			<formula>A[] PLC.complete &amp;&amp; var[0] imply (gen01.running or var[1])
+			</formula>
+			<comment>
+			</comment>
+		</query>
+		<query>
+			<formula>(in0 &amp;&amp; gen00.x &gt; T_SCAN) --&gt; var[0]
+			</formula>
+			<comment>
+			</comment>
+		</query>
+		<query>
+			<formula>A[] in0 &amp;&amp; PLC.complete imply (gen00.running or var[0])
+			</formula>
+			<comment>
+			</comment>
+		</query>
+	</queries>
+</nta>
