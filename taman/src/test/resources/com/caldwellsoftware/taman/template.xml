@@ -4,27 +4,28 @@
 	<declaration>// constants
 const int N_INPUTS = 2; //todo: how many inputs?
 const int N_OUTPUTS = 2; //todo: how many outputs?
-const int N_ELEMENTS = 100; //todo: calculate number of elements
+const int N_GENES = 2; //todo: calculate number of elements
 const int T_SCAN = 1000; //scantime in milliseconds
 const int T_ADAPTER = 500; //adapter delay in milliseconds
 
 // channels
 broadcast chan envInput[N_INPUTS];
+broadcast chan envOutput[N_OUTPUTS];
 //broadcast chan chVAR[OUTPUTS][GENES_PER_OUTPUT - 1];
 //broadcast chan chOUT[OUTPUTS];
-broadcast chan exec[N_ELEMENTS];
+broadcast chan exec[N_GENES];
 broadcast chan input;
 broadcast chan output;
 
 // variables
-int[0,1] var[N_ELEMENTS];
-
+int[0,1] geneOut[N_GENES];
+int[0,1] inputOut[N_INPUTS];
 
 //inputs
-int[0,1] in0, in1;
+//int[0,1] in0, in1;
 
 //outputs
-int[0,1] out0, out1;</declaration>
+//int[0,1] out0, out1;</declaration>
 	<template>
 		<name>PLC</name>
 		<declaration>int n;
@@ -52,13 +53,13 @@ clock x;</declaration>
 		<transition>
 			<source ref="id1"/>
 			<target ref="id0"/>
-			<label kind="guard" x="255" y="-34">n &gt;= N_ELEMENTS</label>
+			<label kind="guard" x="255" y="-34">n &gt;= N_GENES</label>
 			<label kind="synchronisation" x="289" y="-17">output!</label>
 		</transition>
 		<transition>
 			<source ref="id1"/>
 			<target ref="id1"/>
-			<label kind="guard" x="119" y="51">n &lt; N_ELEMENTS</label>
+			<label kind="guard" x="119" y="51">n &lt; N_GENES</label>
 			<label kind="synchronisation" x="136" y="68">exec[n]!</label>
 			<label kind="assignment" x="136" y="85">n:=n+1</label>
 			<nail x="187" y="51"/>
@@ -73,7 +74,7 @@ clock x;</declaration>
 	</template>
 	<template>
 		<name>INPUT</name>
-		<parameter>broadcast chan &amp;in, int[0,1] &amp;var</parameter>
+		<parameter>broadcast chan &amp;in, int[0,1] &amp;out</parameter>
 		<declaration>clock x;</declaration>
 		<location id="id3" x="0" y="195">
 			<name x="8" y="161">armed</name>
@@ -89,18 +90,18 @@ clock x;</declaration>
 		<transition>
 			<source ref="id3"/>
 			<target ref="id5"/>
-			<label kind="guard" x="136" y="85">var == 1</label>
+			<label kind="guard" x="136" y="85">out == 1</label>
 			<label kind="synchronisation" x="136" y="102">input?</label>
-			<label kind="assignment" x="136" y="119">var := 0</label>
+			<label kind="assignment" x="136" y="119">out := 0</label>
 			<nail x="127" y="195"/>
 			<nail x="127" y="0"/>
 		</transition>
 		<transition>
 			<source ref="id3"/>
 			<target ref="id5"/>
-			<label kind="guard" x="-161" y="76">var == 0</label>
+			<label kind="guard" x="-161" y="76">out == 0</label>
 			<label kind="synchronisation" x="-161" y="93">input?</label>
-			<label kind="assignment" x="-161" y="110">var := 1</label>
+			<label kind="assignment" x="-161" y="110">out := 1</label>
 			<nail x="-102" y="195"/>
 			<nail x="-102" y="0"/>
 		</transition>
@@ -116,88 +117,183 @@ clock x;</declaration>
 		</transition>
 	</template>
 	<template>
-		<name x="5" y="5">TON</name>
-		<parameter>broadcast chan &amp;exec, int[0,1] &amp;in, int[0,1] &amp;out, int delay</parameter>
-		<declaration>clock x;</declaration>
-		<location id="id6" x="178" y="110">
-			<name x="168" y="76">running</name>
-			<label kind="invariant" x="168" y="127">x&lt;=(delay + T_SCAN)</label>
+		<name>OUTPUT</name>
+		<parameter>broadcast chan &amp;out, int[0,1] &amp;in</parameter>
+		<declaration>clock x;
+int[0,1] last;</declaration>
+		<location id="id6" x="0" y="195">
+			<committed/>
 		</location>
-		<location id="id7" x="0" y="229">
-			<name x="-10" y="195">on</name>
+		<location id="id7" x="0" y="85">
+			<label kind="invariant" x="8" y="93">x&lt;=T_ADAPTER</label>
 		</location>
-		<location id="id8" x="0" y="-17">
-			<name x="-10" y="-51">off</name>
+		<location id="id8" x="0" y="-34">
+			<name x="-10" y="-68">idle</name>
 		</location>
 		<init ref="id8"/>
 		<transition>
-			<source ref="id7"/>
+			<source ref="id6"/>
 			<target ref="id8"/>
+			<nail x="178" y="195"/>
+			<nail x="178" y="-34"/>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id6"/>
+			<label kind="synchronisation" x="0" y="123">out!</label>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id7"/>
+			<label kind="guard" x="-229" y="68">last != in</label>
+			<label kind="synchronisation" x="-229" y="85">output?</label>
+			<label kind="assignment" x="-229" y="102">x:=0, last:=in</label>
+			<nail x="-145" y="140"/>
+			<nail x="-145" y="55"/>
+		</transition>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id7"/>
+			<label kind="guard" x="8" y="-8">last != in</label>
+			<label kind="synchronisation" x="8" y="9">output?</label>
+			<label kind="assignment" x="8" y="26">x:=0, last:=in</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">TON</name>
+		<parameter>broadcast chan &amp;exec, int[0,1] &amp;in, int[0,1] &amp;out, int delay</parameter>
+		<declaration>clock x;</declaration>
+		<location id="id9" x="178" y="110">
+			<name x="168" y="76">running</name>
+			<label kind="invariant" x="168" y="127">x&lt;=(delay + T_SCAN)</label>
+		</location>
+		<location id="id10" x="0" y="229">
+			<name x="-10" y="195">on</name>
+		</location>
+		<location id="id11" x="0" y="-17">
+			<name x="-10" y="-51">off</name>
+		</location>
+		<init ref="id11"/>
+		<transition>
+			<source ref="id10"/>
+			<target ref="id11"/>
 			<label kind="guard" x="0" y="72">in==0</label>
 			<label kind="synchronisation" x="0" y="89">exec?</label>
 			<label kind="assignment" x="0" y="106">out:=0</label>
 		</transition>
 		<transition>
-			<source ref="id6"/>
-			<target ref="id8"/>
+			<source ref="id9"/>
+			<target ref="id11"/>
 			<label kind="guard" x="18" y="-51">in==0</label>
 			<label kind="synchronisation" x="68" y="-34">exec?</label>
 			<nail x="178" y="-17"/>
 		</transition>
 		<transition>
-			<source ref="id6"/>
-			<target ref="id7"/>
+			<source ref="id9"/>
+			<target ref="id10"/>
 			<label kind="guard" x="85" y="178">x&gt;=delay &amp;&amp; in==1</label>
 			<label kind="synchronisation" x="18" y="152">exec?</label>
 			<label kind="assignment" x="18" y="169">out:=1</label>
 		</transition>
 		<transition>
-			<source ref="id8"/>
-			<target ref="id6"/>
+			<source ref="id11"/>
+			<target ref="id9"/>
 			<label kind="guard" x="18" y="12">in==1</label>
 			<label kind="synchronisation" x="76" y="0">exec?</label>
 			<label kind="assignment" x="93" y="25">x:=0</label>
 		</transition>
 	</template>
 	<template>
+		<name>AND</name>
+		<parameter>broadcast chan &amp;exec, int[0,1] &amp;in1, int[0,1] &amp;in2, int[0,1] &amp;out</parameter>
+		<location id="id12" x="0" y="136">
+			<name x="-10" y="102">on</name>
+		</location>
+		<location id="id13" x="0" y="0">
+			<name x="-10" y="-34">off</name>
+		</location>
+		<init ref="id13"/>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id13"/>
+			<label kind="guard" x="-101" y="68">in1==0 || in2==0</label>
+			<label kind="synchronisation" x="-101" y="85">exec?</label>
+			<label kind="assignment" x="-101" y="102">out:=0</label>
+			<nail x="-119" y="68"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id12"/>
+			<label kind="guard" x="0" y="34">in1==1 &amp;&amp; in2==1</label>
+			<label kind="synchronisation" x="0" y="51">exec?</label>
+			<label kind="assignment" x="0" y="68">out:=1</label>
+		</transition>
+	</template>
+	<template>
+		<name>OR</name>
+		<parameter>broadcast chan &amp;exec, int[0,1] &amp;in1, int[0,1] &amp;in2, int[0,1] &amp;out</parameter>
+		<location id="id14" x="0" y="161">
+			<name x="-10" y="127">on</name>
+		</location>
+		<location id="id15" x="0" y="0">
+			<name x="-10" y="-34">off</name>
+		</location>
+		<init ref="id15"/>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id15"/>
+			<label kind="guard" x="-118" y="93">in1==0 &amp;&amp; in2==0</label>
+			<label kind="synchronisation" x="-118" y="110">exec?</label>
+			<label kind="assignment" x="-118" y="127">out:=0</label>
+			<nail x="-136" y="93"/>
+		</transition>
+		<transition>
+			<source ref="id15"/>
+			<target ref="id14"/>
+			<label kind="guard" x="0" y="46">in1==1 || in2==1</label>
+			<label kind="synchronisation" x="0" y="63">exec?</label>
+			<label kind="assignment" x="0" y="80">out:=1</label>
+		</transition>
+	</template>
+	<template>
 		<name>TOFF</name>
 		<parameter>broadcast chan &amp;exec, int[0,1] &amp;in, int[0,1] &amp;out, int delay</parameter>
 		<declaration>clock x;</declaration>
-		<location id="id9" x="202" y="149">
+		<location id="id16" x="202" y="149">
 			<name x="195" y="119">on</name>
 		</location>
-		<location id="id10" x="24" y="268">
+		<location id="id17" x="24" y="268">
 			<name x="-34" y="238">running</name>
 			<label kind="invariant" x="17" y="289">x&lt;=(delay + T_SCAN)</label>
 		</location>
-		<location id="id11" x="24" y="22">
+		<location id="id18" x="24" y="22">
 			<name x="14" y="-12">off</name>
 		</location>
-		<init ref="id11"/>
+		<init ref="id18"/>
 		<transition>
-			<source ref="id10"/>
-			<target ref="id9"/>
+			<source ref="id17"/>
+			<target ref="id16"/>
 			<label kind="guard" x="212" y="229">in==1</label>
 			<label kind="synchronisation" x="212" y="246">exec?</label>
 			<nail x="204" y="263"/>
 		</transition>
 		<transition>
-			<source ref="id10"/>
-			<target ref="id11"/>
+			<source ref="id17"/>
+			<target ref="id18"/>
 			<label kind="guard" x="25" y="110">x&gt;=delay &amp;&amp; in==0</label>
 			<label kind="synchronisation" x="24" y="128">exec?</label>
 			<label kind="assignment" x="24" y="145">out:=0</label>
 		</transition>
 		<transition>
-			<source ref="id9"/>
-			<target ref="id10"/>
+			<source ref="id16"/>
+			<target ref="id17"/>
 			<label kind="guard" x="102" y="213">in==0</label>
 			<label kind="synchronisation" x="102" y="229">exec?</label>
 			<label kind="assignment" x="102" y="246">x:=0</label>
 		</transition>
 		<transition>
-			<source ref="id11"/>
-			<target ref="id9"/>
+			<source ref="id18"/>
+			<target ref="id16"/>
 			<label kind="guard" x="102" y="51">in==1</label>
 			<label kind="synchronisation" x="100" y="39">exec?</label>
 			<label kind="assignment" x="102" y="59">out:=1</label>
@@ -207,32 +303,37 @@ clock x;</declaration>
 		<name>ENV</name>
 		<declaration>clock x;
 int n = 0;</declaration>
-		<location id="id12" x="204" y="0">
+		<location id="id19" x="204" y="0">
 			<committed/>
 		</location>
-		<location id="id13" x="0" y="0">
+		<location id="id20" x="0" y="0">
 		</location>
-		<init ref="id13"/>
+		<init ref="id20"/>
 		<transition>
-			<source ref="id12"/>
-			<target ref="id13"/>
+			<source ref="id19"/>
+			<target ref="id20"/>
 			<label kind="synchronisation" x="18" y="85">envInput[n]!</label>
 			<nail x="204" y="102"/>
 			<nail x="0" y="102"/>
 		</transition>
 		<transition>
-			<source ref="id13"/>
-			<target ref="id12"/>
+			<source ref="id20"/>
+			<target ref="id19"/>
 			<label kind="select" x="34" y="-25">a : int[0, N_INPUTS-1]</label>
 			<label kind="assignment" x="18" y="0">n := a</label>
 		</transition>
 	</template>
-	<system>// gene declarations
+	<system>// input declarations
+//input0 = INPUT(envInput[0], inputOut[0]);
+//input1 = INPUT(envInput[1], inputOut[1]);
 
+// gene declarations
+//ton0 = TON(exec[0], inputOut[0], geneOut[0], 1000);
+//ton1 = TON(exec[1], inputOut[1], geneOut[1], 1000);
 
-input0 = INPUT(envInput[0], in0);
-input1 = INPUT(envInput[1], in1);
-
+// output declarations
+//out0 = OUTPUT(envOutput[0], geneOut[0]);
+//out1 = OUTPUT(envOutput[1], geneOut[1]);
 
 // List one or more processes to be composed into a system.
 system ENV, PLC;

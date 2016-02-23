@@ -85,15 +85,30 @@ public class TaSystem {
      * @param declaration 
      */
     public void addDeclaration(String declaration) {
-        // get the declaration section
+        // get the declaration section of the system
         NodeList nodes = document.getElementsByTagName("declaration");
         String text = nodes.item(0).getTextContent();
         
-        // add the variable declaration to the end of the section
-        // no other structure can be enforced/expected in the file format
-        text = text + System.lineSeparator() + declaration + ";";
+        // get the declaration type and name only (strip the "=" and later)
+        String typeName = declaration;        
+        Pattern pattern = Pattern.compile(".*=");
+        Matcher matcher = pattern.matcher(declaration);
+        if (matcher.find()) {
+            typeName = matcher.group();
+        }
         
-        nodes.item(0).setTextContent(text);
+        // find the declaration in the system, ignoring assignments
+        pattern = Pattern.compile("^"+typeName+".*;", Pattern.MULTILINE);
+        matcher = pattern.matcher(text);
+        if (matcher.find()) {
+            // if the declaration exists, replace it with the new declaration
+            text = matcher.replaceAll(declaration+";");
+            nodes.item(0).setTextContent(text);
+        } else {
+            // if the declaration does not exists, just add it to the end of the section
+            text = text + System.lineSeparator() + declaration + ";";
+            nodes.item(0).setTextContent(text);
+        }
     }
     
     /** 
@@ -137,7 +152,7 @@ public class TaSystem {
      * @param name
      * @param value 
      */
-    public void addConstInt(String name, int value) {
+    public void addConstInt(String name, int value) {      
         String declaration = "const int " + name + " = " + value;
         this.addDeclaration(declaration);
     }

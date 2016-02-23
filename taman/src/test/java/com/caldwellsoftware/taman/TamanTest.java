@@ -67,7 +67,7 @@ public class TamanTest {
         ta.addVarInt("myTestInt");
         ta.addBroadcastChan("myTestBroadcastChan");
         ta.addChan("myTestChan");
-        ta.addConstInt("myTestConst", 123);
+        ta.addConstInt("N_GENES", 4);
     }
     
     @Test(enabled=true)
