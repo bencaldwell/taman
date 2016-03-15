@@ -91,10 +91,16 @@ public class TaSystem {
         
         // get the declaration type and name only (strip the "=" and later)
         String typeName = declaration;        
-        Pattern pattern = Pattern.compile(".*=");
+        /* strip anything after '=' and '[' in the decl to allow matching
+        declarations with different array sizes or assignments.
+        These will be replaced with the new array size or assignment
+        */
+        Pattern pattern = Pattern.compile(".*[\\[|=]");
         Matcher matcher = pattern.matcher(declaration);
         if (matcher.find()) {
             typeName = matcher.group();
+            // add '\' before '[' or ']' to prevent these being parsed for regex
+            typeName = typeName.replaceAll("\\[", "\\\\[").replaceAll("\\]", "\\\\]");
         }
         
         // find the declaration in the system, ignoring assignments
