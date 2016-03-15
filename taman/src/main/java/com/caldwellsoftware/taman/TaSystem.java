@@ -95,14 +95,14 @@ public class TaSystem {
         declarations with different array sizes or assignments.
         These will be replaced with the new array size or assignment
         */
-        Pattern pattern = Pattern.compile(".*[\\[|=]");
+        Pattern pattern = Pattern.compile(".*[^int][\\[|=]");
         Matcher matcher = pattern.matcher(declaration);
         if (matcher.find()) {
             typeName = matcher.group();
-            // add '\' before '[' or ']' to prevent these being parsed for regex
-            typeName = typeName.replaceAll("\\[", "\\\\[").replaceAll("\\]", "\\\\]");
         }
         
+        // add '\' before '[' or ']' to prevent these being parsed for regex
+        typeName = typeName.replaceAll("\\[", "\\\\[").replaceAll("\\]", "\\\\]");
         // find the declaration in the system, ignoring assignments
         pattern = Pattern.compile("^"+typeName+".*;", Pattern.MULTILINE);
         matcher = pattern.matcher(text);

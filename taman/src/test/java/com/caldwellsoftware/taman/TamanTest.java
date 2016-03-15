@@ -64,6 +64,8 @@ public class TamanTest {
     @Test(enabled=true)
     public void addDeclarations(){
         ta.addVarBool("myTestBool");
+        ta.addVarBool("myInput");
+        ta.addVarBool("myInput2");
         ta.addVarInt("myTestInt");
         ta.addBroadcastChan("myTestBroadcastChan");
         ta.addChan("myTestChan");

@@ -23,6 +23,7 @@ int[0,1] inputOut[N_INPUTS];
 
 //inputs
 //int[0,1] in0, in1;
+int[0,1] myInput;
 
 //outputs
 //int[0,1] out0, out1;</declaration>
