@@ -176,17 +176,36 @@ public class TaSystem {
         
         // add the new instance
         String instanceDecl = instanceName + " = " + templateName + "(";
-        instanceDecl = instanceDecl + StringUtils.join(args,",") + ");" + System.lineSeparator();
-        text = instanceDecl + text;
+        instanceDecl = instanceDecl + StringUtils.join(args,",") + ");";
+        
+        // find the declaration in the system, ignoring assignments
+        Pattern pattern = Pattern.compile("^"+instanceName+".*=.*;", Pattern.MULTILINE);
+        Matcher matcher = pattern.matcher(text);
+        if (matcher.find()) {
+            // if the declaration exists, replace it with the new declaration
+            text = matcher.replaceAll(instanceDecl);
+            nodes.item(0).setTextContent(text);
+        } else {
+            // if the declaration does not exist, just add it to the end of the section
+            text = instanceDecl + System.lineSeparator() + text;
+            nodes.item(0).setTextContent(text);
+        }
+        
         
         // find the "system ...;" line and append the new instance
-        Pattern pattern = Pattern.compile("^system.*$", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
-        Matcher matcher = pattern.matcher(text);
+        pattern = Pattern.compile("^system.*$", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+        matcher = pattern.matcher(text);
         matcher.find();
-        String systemDecl = matcher.group();
-        systemDecl = systemDecl.replace(";", ", " + instanceName + ";");
-        text = matcher.replaceAll(systemDecl);
-        nodes.item(0).setTextContent(text);
+        String systemDecl = matcher.group(); // get the system declaration line
+        pattern = Pattern.compile(instanceName, Pattern.MULTILINE);
+        Matcher matcherInstance = pattern.matcher(systemDecl);
+        if (matcherInstance.find()) {
+            // if the instance declaration exists do nothing
+        } else {
+            systemDecl = systemDecl.replace(";", ", " + instanceName + ";");
+            text = matcher.replaceAll(systemDecl);
+            nodes.item(0).setTextContent(text);
+        }
     }
     
 
