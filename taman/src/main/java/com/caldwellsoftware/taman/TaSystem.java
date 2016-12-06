@@ -104,7 +104,7 @@ public class TaSystem {
         // add '\' before '[' or ']' to prevent these being parsed for regex
         typeName = typeName.replaceAll("\\[", "\\\\[").replaceAll("\\]", "\\\\]");
         // find the declaration in the system, ignoring assignments
-        pattern = Pattern.compile("^"+typeName+".*;", Pattern.MULTILINE);
+        pattern = Pattern.compile("^"+typeName+"[;\\s=].*", Pattern.MULTILINE);
         matcher = pattern.matcher(text);
         if (matcher.find()) {
             // if the declaration exists, replace it with the new declaration
